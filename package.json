@@ -1,0 +1,8 @@
+{
+  "name": "tribeca-chinatown-eats",
+  "type": "module",
+  "scripts": {
+    "start": "node --no-warnings server.js",
+    "dev": "node --no-warnings server.js"
+  }
+}

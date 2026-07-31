@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tribeca & Chinatown Eats</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #f1f5f9;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+    header {
+      background: #0f172a;
+      color: white;
+      padding: 0 20px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      z-index: 200;
+    }
+
+    .hdr-left { display: flex; align-items: center; gap: 10px; }
+
+    .hdr-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+    }
+
+    .hdr-title  { font-size: 14px; font-weight: 700; letter-spacing: -.3px; }
+    .hdr-sub    { font-size: 11px; color: #94a3b8; }
+
+    .hdr-stats  { display: flex; gap: 10px; }
+
+    .stat-pill {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 11px; border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+    }
+    .stat-pill.v { background: rgba(22,163,74,.18); color: #4ade80; }
+    .stat-pill.w { background: rgba(217,119,6,.18);  color: #fbbf24; }
+
+    /* ── Layout ─────────────────────────────────────── */
+    #layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── Sidebar ────────────────────────────────────── */
+    #sidebar {
+      width: 316px; flex-shrink: 0;
+      background: white;
+      border-right: 1px solid #e2e8f0;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    .controls {
+      padding: 11px 11px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex; flex-direction: column; gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Search */
+    .search-wrap { position: relative; }
+    .search-wrap svg {
+      position: absolute; left: 9px; top: 50%;
+      transform: translateY(-50%); color: #94a3b8; pointer-events: none;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 8px 10px 8px 30px;
+      border: 1.5px solid #e2e8f0; border-radius: 8px;
+      font-size: 12.5px; font-family: inherit;
+      color: #1e293b; background: #f8fafc; outline: none;
+      transition: border-color .15s, background .15s;
+    }
+    .search-wrap input:focus { border-color: #94a3b8; background: #fff; }
+    .search-wrap input::placeholder { color: #94a3b8; }
+
+    /* Pills */
+    .pill-row { display: flex; gap: 5px; flex-wrap: wrap; }
+
+    .pill {
+      padding: 4px 9px; border-radius: 20px;
+      border: 1.5px solid #e2e8f0;
+      font-size: 11.5px; font-weight: 500; font-family: inherit;
+      cursor: pointer; background: white; color: #64748b;
+      transition: all .15s; white-space: nowrap;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .pill:hover { border-color: #cbd5e1; color: #334155; }
+    .pill.active { background: #0f172a; border-color: #0f172a; color: white; }
+    .pill.s-v.active { background: #16a34a; border-color: #16a34a; }
+    .pill.s-w.active { background: #d97706; border-color: #d97706; }
+
+    .pill-count {
+      min-width: 16px; text-align: center;
+      padding: 0 4px; border-radius: 10px;
+      font-size: 10px;
+      background: #f1f5f9; color: #64748b;
+    }
+    .pill.active .pill-count { background: rgba(255,255,255,.22); color: inherit; }
+
+    /* Neighborhood pills */
+    .pill.n-t:not(.active) { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+    .pill.n-t.active       { background: #7c3aed; border-color: #7c3aed; color: white; }
+    .pill.n-c:not(.active) { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+    .pill.n-c.active       { background: #dc2626; border-color: #dc2626; color: white; }
+
+    /* ── Spot list ──────────────────────────────────── */
+    #spot-list {
+      flex: 1; overflow-y: auto; padding: 6px;
+    }
+    #spot-list::-webkit-scrollbar { width: 4px; }
+    #spot-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+    .card {
+      padding: 10px 11px; border-radius: 10px; cursor: pointer;
+      border: 1.5px solid transparent; margin-bottom: 3px;
+      transition: background .12s, border-color .12s;
+    }
+    .card:hover { background: #f8fafc; border-color: #e2e8f0; }
+    .card.hl    { background: #eff6ff; border-color: #bfdbfe; }
+
+    .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+
+    .card-name { font-size: 13px; font-weight: 600; color: #1e293b; line-height: 1.3; }
+
+    .badge {
+      flex-shrink: 0;
+      font-size: 9.5px; font-weight: 700; padding: 2px 6px;
+      border-radius: 10px; letter-spacing: .3px; text-transform: uppercase;
+    }
+    .badge.visited { background: #dcfce7; color: #15803d; }
+    .badge.want    { background: #fef3c7; color: #b45309; }
+
+    .card-detail {
+      font-size: 11px; color: #64748b; margin-top: 3px;
+      display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    }
+    .card-detail .dot { color: #cbd5e1; }
+
+    .nbhd {
+      display: inline-block; margin-top: 5px;
+      padding: 1px 6px; border-radius: 4px;
+      font-size: 10px; font-weight: 600;
+    }
+    .nbhd.tribeca    { background: #f5f3ff; color: #6d28d9; }
+    .nbhd.chinatown  { background: #fef2f2; color: #b91c1c; }
+
+    .empty-msg {
+      padding: 40px 16px; text-align: center;
+      color: #94a3b8; font-size: 13px;
+    }
+
+    /* ── Map ────────────────────────────────────────── */
+    #map { flex: 1; z-index: 0; }
+
+    /* ── Leaflet popup overrides ────────────────────── */
+    .leaflet-popup-content-wrapper {
+      border-radius: 14px !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,.16) !important;
+      padding: 0 !important;
+      overflow: hidden;
+    }
+    .leaflet-popup-content { margin: 0 !important; width: 252px !important; }
+    .leaflet-popup-close-button {
+      top: 8px !important; right: 8px !important;
+      color: #64748b !important; font-size: 18px !important;
+    }
+
+    .pu { font-family: 'Inter', sans-serif; }
+    .pu-hdr { padding: 14px 14px 10px; border-bottom: 1px solid #f1f5f9; }
+    .pu-name { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+    .pu-info { font-size: 11.5px; color: #64748b; line-height: 1.5; }
+
+    .pu-actions { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .pu-row { display: flex; gap: 6px; }
+
+    .pu-btn {
+      flex: 1; padding: 8px 6px; border: none; border-radius: 8px;
+      font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif;
+      cursor: pointer; transition: all .15s;
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+    }
+    .pu-btn.v-btn { background: #f0fdf4; color: #16a34a; border: 1.5px solid #bbf7d0; }
+    .pu-btn.v-btn:hover, .pu-btn.v-btn.on { background: #16a34a; color: white; border-color: #16a34a; }
+    .pu-btn.w-btn { background: #fffbeb; color: #d97706; border: 1.5px solid #fde68a; }
+    .pu-btn.w-btn:hover, .pu-btn.w-btn.on { background: #d97706; color: white; border-color: #d97706; }
+    .pu-btn.clr { background: #f8fafc; color: #64748b; border: 1.5px solid #e2e8f0; font-size: 11.5px; }
+    .pu-btn.clr:hover { background: #f1f5f9; color: #475569; }
+
+    /* ── Legend ─────────────────────────────────────── */
+    .legend {
+      position: absolute; bottom: 28px; right: 10px;
+      z-index: 1000; background: white;
+      border-radius: 10px; padding: 10px 13px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.12);
+      font-family: 'Inter', sans-serif; font-size: 11.5px; color: #475569;
+      pointer-events: none;
+    }
+    .legend-title {
+      font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .6px; color: #94a3b8; margin-bottom: 7px;
+    }
+    .legend-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; font-weight: 500; }
+    .legend-row:last-child { margin-bottom: 0; }
+    .ld {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,.18);
+    }
+    .ld.n { background: #94a3b8; }
+    .ld.v { background: #16a34a; }
+    .ld.w { background: #d97706; }
+
+    /* ── Responsive ─────────────────────────────────── */
+    @media (max-width: 640px) {
+      #layout { flex-direction: column; }
+      #sidebar { width: 100%; height: 44vh; border-right: none; border-bottom: 1px solid #e2e8f0; }
+      #map { height: 56vh; }
+      .hdr-stats { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-left">
+    <div class="hdr-icon">🗺️</div>
+    <div>
+      <div class="hdr-title">Tribeca & Chinatown Eats</div>
+      <div class="hdr-sub">Fast casual spots · Lower Manhattan</div>
+    </div>
+  </div>
+  <div class="hdr-stats">
+    <div class="stat-pill v">✓ <span id="sv">0</span> visited</div>
+    <div class="stat-pill w">★ <span id="sw">0</span> want to visit</div>
+  </div>
+</header>
+
+<div id="layout">
+  <aside id="sidebar">
+    <div class="controls">
+      <div class="search-wrap">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input id="search" type="text" placeholder="Search spots or cuisine…">
+      </div>
+
+      <div class="pill-row" id="sf">
+        <button class="pill active" data-f="all">All <span class="pill-count" id="ca">15</span></button>
+        <button class="pill s-v"   data-f="visited">✓ Visited <span class="pill-count" id="cv">0</span></button>
+        <button class="pill s-w"   data-f="want">★ Want <span class="pill-count" id="cw">0</span></button>
+        <button class="pill"       data-f="none">Not yet <span class="pill-count" id="cn">15</span></button>
+      </div>
+
+      <div class="pill-row" id="nf">
+        <button class="pill active" data-n="all">All Areas</button>
+        <button class="pill n-t"    data-n="Tribeca">Tribeca</button>
+        <button class="pill n-c"    data-n="Chinatown">Chinatown</button>
+      </div>
+    </div>
+
+    <div id="spot-list"></div>
+  </aside>
+
+  <div id="map">
+    <div class="legend">
+      <div class="legend-title">Status</div>
+      <div class="legend-row"><div class="ld n"></div> Unvisited</div>
+      <div class="legend-row"><div class="ld v"></div> Visited</div>
+      <div class="legend-row"><div class="ld w"></div> Want to visit</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const SPOTS = [
+  // ── Tribeca ──────────────────────────────────────────────────────────────
+  { id:  1, name: "Num Pang Kitchen",         cuisine: "Cambodian Sandwiches",      address: "140 Church St",    lat: 40.7147, lng: -74.0093, price: "$$", neighborhood: "Tribeca",   emoji: "🥖" },
+  { id:  2, name: "Dig",                       cuisine: "American Fast Casual",       address: "200 Church St",    lat: 40.7168, lng: -74.0094, price: "$$", neighborhood: "Tribeca",   emoji: "🥗" },
+  { id:  3, name: "Sweetgreen",                cuisine: "Salads & Grain Bowls",       address: "50 Murray St",     lat: 40.7153, lng: -74.0083, price: "$$", neighborhood: "Tribeca",   emoji: "🥗" },
+  { id:  4, name: "Takahachi",                 cuisine: "Japanese",                   address: "145 Duane St",     lat: 40.7163, lng: -74.0088, price: "$$", neighborhood: "Tribeca",   emoji: "🍱" },
+  { id:  5, name: "Frenchette Bakery",         cuisine: "French Bakery & Café",       address: "373 Greenwich St", lat: 40.7185, lng: -74.0101, price: "$",  neighborhood: "Tribeca",   emoji: "🥐" },
+  { id:  6, name: "Arcade Bakery",             cuisine: "Artisan Bakery",             address: "220 Church St",    lat: 40.7166, lng: -74.0090, price: "$",  neighborhood: "Tribeca",   emoji: "🍞" },
+  // ── Chinatown ─────────────────────────────────────────────────────────────
+  { id:  7, name: "Joe's Shanghai",            cuisine: "Soup Dumplings",             address: "9 Pell St",        lat: 40.7143, lng: -73.9977, price: "$$", neighborhood: "Chinatown", emoji: "🥟" },
+  { id:  8, name: "Xi'an Famous Foods",        cuisine: "Hand-Ripped Noodles",        address: "67 Bayard St",     lat: 40.7153, lng: -73.9988, price: "$",  neighborhood: "Chinatown", emoji: "🍜" },
+  { id:  9, name: "Nom Wah Tea Parlor",        cuisine: "Dim Sum",                    address: "13 Doyers St",     lat: 40.7140, lng: -73.9979, price: "$$", neighborhood: "Chinatown", emoji: "🫕" },
+  { id: 10, name: "Prosperity Dumpling",       cuisine: "Pan-Fried Dumplings",        address: "46 Eldridge St",   lat: 40.7149, lng: -73.9956, price: "$",  neighborhood: "Chinatown", emoji: "🥟" },
+  { id: 11, name: "NY Noodletown",             cuisine: "Cantonese Noodles & BBQ",    address: "28 Bowery",        lat: 40.7142, lng: -73.9970, price: "$",  neighborhood: "Chinatown", emoji: "🍜" },
+  { id: 12, name: "Big Wong",                  cuisine: "Cantonese BBQ",              address: "67 Mott St",       lat: 40.7146, lng: -73.9972, price: "$",  neighborhood: "Chinatown", emoji: "🍖" },
+  { id: 13, name: "Tasty Hand-Pulled Noodles", cuisine: "Hand-Pulled Noodles",        address: "1 Doyers St",      lat: 40.7138, lng: -73.9982, price: "$",  neighborhood: "Chinatown", emoji: "🍜" },
+  { id: 14, name: "Vanessa's Dumpling House",  cuisine: "Dumplings & Wraps",          address: "118 Eldridge St",  lat: 40.7157, lng: -73.9952, price: "$",  neighborhood: "Chinatown", emoji: "🥟" },
+  { id: 15, name: "Jing Fong",                 cuisine: "Cantonese Dim Sum",          address: "20 Elizabeth St",  lat: 40.7155, lng: -73.9968, price: "$$", neighborhood: "Chinatown", emoji: "🫕" },
+];
+
+// ── State ────────────────────────────────────────────────────────────────────
+let statuses   = {};
+let activeF    = 'all';
+let activeN    = 'all';
+let query      = '';
+let hlId       = null;
+const markers  = {};
+
+// ── Map init ─────────────────────────────────────────────────────────────────
+const map = L.map('map', { center: [40.7155, -74.0018], zoom: 15 });
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com">CARTO</a>',
+  subdomains: 'abcd', maxZoom: 20
+}).addTo(map);
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const COLOR = { visited: '#16a34a', want: '#d97706', none: '#94a3b8' };
+
+function makeIcon(spot, st) {
+  const c = COLOR[st] || COLOR.none;
+  return L.divIcon({
+    html: `<div style="width:34px;height:34px;border-radius:50%;background:${c};border:2.5px solid white;box-shadow:0 2px 10px rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer">${spot.emoji}</div>`,
+    className: '', iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -20]
+  });
+}
+
+function popupHTML(spot) {
+  const st = statuses[spot.id] || 'none';
+  return `
+    <div class="pu">
+      <div class="pu-hdr">
+        <div class="pu-name">${spot.name}</div>
+        <div class="pu-info">${spot.cuisine}<br>${spot.address} &middot; ${spot.price}</div>
+      </div>
+      <div class="pu-actions">
+        <div class="pu-row">
+          <button class="pu-btn v-btn${st==='visited'?' on':''}" onclick="window.setStatus(${spot.id},'visited')">✓ Visited</button>
+          <button class="pu-btn w-btn${st==='want'?' on':''}"    onclick="window.setStatus(${spot.id},'want')">★ Want to Visit</button>
+        </div>
+        ${st !== 'none' ? `<button class="pu-btn clr" onclick="window.setStatus(${spot.id},'none')">✕ Clear status</button>` : ''}
+      </div>
+    </div>`;
+}
+
+// ── Markers ──────────────────────────────────────────────────────────────────
+function initMarkers() {
+  SPOTS.forEach(spot => {
+    const st = statuses[spot.id] || 'none';
+    const m = L.marker([spot.lat, spot.lng], { icon: makeIcon(spot, st) })
+      .addTo(map)
+      .bindPopup(() => popupHTML(spot), { maxWidth: 270, minWidth: 252 });
+
+    m.on('click', () => { hlId = spot.id; renderList(); });
+    m.on('popupclose', () => { if (hlId === spot.id) { hlId = null; renderList(); } });
+    markers[spot.id] = m;
+  });
+}
+
+function refreshMarker(id) {
+  const spot = SPOTS.find(s => s.id === id);
+  const st   = statuses[id] || 'none';
+  markers[id].setIcon(makeIcon(spot, st));
+  if (markers[id].isPopupOpen()) markers[id].setPopupContent(popupHTML(spot));
+}
+
+// ── Status mutation ──────────────────────────────────────────────────────────
+window.setStatus = async function(id, st) {
+  if (statuses[id] === st) st = 'none'; // toggle off
+  statuses[id] = st;
+  refreshMarker(id);
+  updateStats();
+  renderList();
+  try {
+    await fetch(`/api/statuses/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: st })
+    });
+  } catch {}
+};
+
+// ── Stats & counts ───────────────────────────────────────────────────────────
+function updateStats() {
+  const all = SPOTS.map(s => statuses[s.id] || 'none');
+  const v = all.filter(s => s === 'visited').length;
+  const w = all.filter(s => s === 'want').length;
+  const n = all.filter(s => s === 'none').length;
+  document.getElementById('sv').textContent = v;
+  document.getElementById('sw').textContent = w;
+  document.getElementById('ca').textContent = SPOTS.length;
+  document.getElementById('cv').textContent = v;
+  document.getElementById('cw').textContent = w;
+  document.getElementById('cn').textContent = n;
+}
+
+// ── Filtering ────────────────────────────────────────────────────────────────
+function filtered() {
+  return SPOTS.filter(s => {
+    const st = statuses[s.id] || 'none';
+    if (activeF !== 'all' && st !== activeF) return false;
+    if (activeN !== 'all' && s.neighborhood !== activeN) return false;
+    if (query) {
+      const q = query.toLowerCase();
+      if (!s.name.toLowerCase().includes(q) && !s.cuisine.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+// ── Render list ──────────────────────────────────────────────────────────────
+function renderList() {
+  const el   = document.getElementById('spot-list');
+  const list = filtered();
+
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-msg">No spots match your filters.</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(s => {
+    const st    = statuses[s.id] || 'none';
+    const badge = st !== 'none'
+      ? `<span class="badge ${st}">${st === 'visited' ? '✓ Visited' : '★ Want'}</span>` : '';
+    return `
+      <div class="card${hlId === s.id ? ' hl' : ''}" data-id="${s.id}" onclick="flyTo(${s.id})">
+        <div class="card-top">
+          <span class="card-name">${s.name}</span>
+          ${badge}
+        </div>
+        <div class="card-detail">
+          <span>${s.emoji} ${s.cuisine}</span>
+          <span class="dot">·</span><span>${s.price}</span>
+          <span class="dot">·</span><span>${s.address}</span>
+        </div>
+        <span class="nbhd ${s.neighborhood.toLowerCase()}">${s.neighborhood}</span>
+      </div>`;
+  }).join('');
+
+  if (hlId) {
+    const card = el.querySelector(`[data-id="${hlId}"]`);
+    card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// ── Fly to spot ──────────────────────────────────────────────────────────────
+window.flyTo = function(id) {
+  const s = SPOTS.find(x => x.id === id);
+  hlId = id;
+  renderList();
+  map.flyTo([s.lat, s.lng], 16, { duration: 0.7 });
+  setTimeout(() => markers[id].openPopup(), 750);
+};
+
+// ── Event listeners ──────────────────────────────────────────────────────────
+document.getElementById('sf').addEventListener('click', e => {
+  const btn = e.target.closest('[data-f]');
+  if (!btn) return;
+  document.querySelectorAll('#sf [data-f]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeF = btn.dataset.f;
+  renderList();
+});
+
+document.getElementById('nf').addEventListener('click', e => {
+  const btn = e.target.closest('[data-n]');
+  if (!btn) return;
+  document.querySelectorAll('#nf [data-n]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeN = btn.dataset.n;
+  renderList();
+});
+
+document.getElementById('search').addEventListener('input', e => {
+  query = e.target.value.trim();
+  renderList();
+});
+
+// ── Bootstrap ────────────────────────────────────────────────────────────────
+(async () => {
+  try {
+    const res  = await fetch('/api/statuses');
+    const data = await res.json();
+    for (const [k, v] of Object.entries(data)) statuses[+k] = v;
+  } catch {}
+  initMarkers();
+  updateStats();
+  renderList();
+})();
+</script>
+</body>
+</html>
