@@ -119,6 +119,8 @@
     .pill.n-t.active       { background: #7c3aed; border-color: #7c3aed; color: white; }
     .pill.n-c:not(.active) { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
     .pill.n-c.active       { background: #dc2626; border-color: #dc2626; color: white; }
+    .pill.n-canal:not(.active) { background: #f0fdfa; color: #0f766e; border-color: #99f6e4; }
+    .pill.n-canal.active       { background: #0f766e; border-color: #0f766e; color: white; }
 
     /* ── Spot list ──────────────────────────────────── */
     #spot-list {
@@ -160,6 +162,7 @@
     }
     .nbhd.tribeca    { background: #f5f3ff; color: #6d28d9; }
     .nbhd.chinatown  { background: #fef2f2; color: #b91c1c; }
+    .nbhd.canalst    { background: #f0fdfa; color: #0f766e; }
 
     .empty-msg {
       padding: 40px 16px; text-align: center;
@@ -269,9 +272,10 @@
       </div>
 
       <div class="pill-row" id="nf">
-        <button class="pill active" data-n="all">All Areas</button>
-        <button class="pill n-t"    data-n="Tribeca">Tribeca</button>
-        <button class="pill n-c"    data-n="Chinatown">Chinatown</button>
+        <button class="pill active"  data-n="all">All Areas</button>
+        <button class="pill n-t"     data-n="Tribeca">Tribeca</button>
+        <button class="pill n-canal" data-n="Canal St">Canal St</button>
+        <button class="pill n-c"     data-n="Chinatown">Chinatown</button>
       </div>
     </div>
 
@@ -308,6 +312,17 @@ const SPOTS = [
   { id: 13, name: "Tasty Hand-Pulled Noodles", cuisine: "Hand-Pulled Noodles",        address: "1 Doyers St",      lat: 40.7138, lng: -73.9982, price: "$",  neighborhood: "Chinatown", emoji: "🍜" },
   { id: 14, name: "Vanessa's Dumpling House",  cuisine: "Dumplings & Wraps",          address: "118 Eldridge St",  lat: 40.7157, lng: -73.9952, price: "$",  neighborhood: "Chinatown", emoji: "🥟" },
   { id: 15, name: "Jing Fong",                 cuisine: "Cantonese Dim Sum",          address: "20 Elizabeth St",  lat: 40.7155, lng: -73.9968, price: "$$", neighborhood: "Chinatown", emoji: "🫕" },
+  // ── Canal St ──────────────────────────────────────────────────────────────
+  { id: 16, name: "Dragon Land Bakery",        cuisine: "Chinese BBQ & Pastries",     address: "125 Canal St",     lat: 40.7186, lng: -73.9989, price: "$",  neighborhood: "Canal St",  emoji: "🍮" },
+  { id: 17, name: "Fay Da Bakery",             cuisine: "Chinese Bakery & Café",      address: "83 Mott St",       lat: 40.7174, lng: -73.9971, price: "$",  neighborhood: "Canal St",  emoji: "🧁" },
+  { id: 18, name: "Excellent Dumpling House",  cuisine: "Dumplings & Noodles",        address: "111 Lafayette St", lat: 40.7189, lng: -73.9999, price: "$",  neighborhood: "Canal St",  emoji: "🥟" },
+  { id: 19, name: "Nha Trang",                 cuisine: "Vietnamese Noodles & Pho",   address: "87 Baxter St",     lat: 40.7176, lng: -74.0005, price: "$",  neighborhood: "Canal St",  emoji: "🍜" },
+  { id: 20, name: "Amazing 66",                cuisine: "Cantonese",                  address: "66 Mott St",       lat: 40.7176, lng: -73.9972, price: "$$", neighborhood: "Canal St",  emoji: "🍽️" },
+  { id: 21, name: "Wonton Noodle Garden",      cuisine: "Wonton Soup & Noodles",      address: "56 Mott St",       lat: 40.7178, lng: -73.9973, price: "$",  neighborhood: "Canal St",  emoji: "🍜" },
+  { id: 22, name: "Bo Ky",                     cuisine: "Vietnamese-Chinese Noodles", address: "80 Bayard St",     lat: 40.7151, lng: -73.9985, price: "$",  neighborhood: "Chinatown", emoji: "🍜" },
+  { id: 23, name: "Pho Bang",                  cuisine: "Vietnamese Pho",             address: "157 Mott St",      lat: 40.7162, lng: -73.9967, price: "$",  neighborhood: "Chinatown", emoji: "🍲" },
+  { id: 24, name: "Mei Lai Wah",               cuisine: "HK Bakery & BBQ Buns",       address: "64 Bayard St",     lat: 40.7152, lng: -73.9984, price: "$",  neighborhood: "Chinatown", emoji: "🍡" },
+  { id: 25, name: "Two Hands",                 cuisine: "Café & All-Day Brunch",      address: "251 Church St",    lat: 40.7177, lng: -74.0092, price: "$$", neighborhood: "Tribeca",   emoji: "☕" },
 ];
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -445,7 +460,7 @@ function renderList() {
           <span class="dot">·</span><span>${s.price}</span>
           <span class="dot">·</span><span>${s.address}</span>
         </div>
-        <span class="nbhd ${s.neighborhood.toLowerCase()}">${s.neighborhood}</span>
+        <span class="nbhd ${s.neighborhood.toLowerCase().replace(/ /g,'')}">${s.neighborhood}</span>
       </div>`;
   }).join('');
 
